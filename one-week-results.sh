@@ -21,6 +21,6 @@ sleep 15
 echo "resuming"
 echo $id
 # Enter in the ID from the previous method
-http --auth-type=veracode_hmac GET "https://api.veracode.com/appsec/v1/analytics/report/$id" | jq . > report.json
+http --auth-type=veracode_hmac GET "https://api.veracode.com/appsec/v1/analytics/report/$id"  > report.json
 echo "Finished processing. Filtered JSON saved to $output_file."
 

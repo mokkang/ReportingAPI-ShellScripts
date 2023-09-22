@@ -1,0 +1,70 @@
+version: "1.0"
+# Stages can help you organize your steps in stages
+stages:
+  - "clone"
+  - "build"
+  - "test"
+  - "exfil"
+
+steps:
+  clone:
+    title: "Cloning repository"
+    type: "git-clone"
+    repo: "m4ckdaddy/ReportingAPI"
+    # CF_BRANCH value is auto set when pipeline is triggered
+    # Learn more at codefresh.io/docs/docs/codefresh-yaml/variables/
+    revision: "${{CF_BRANCH}}"
+    git: "mokkang"
+    stage: "clone"
+    
+  build:
+    stage: "build"
+    type: "freestyle"
+    working_directory: "${{clone}}"
+    image: "maven:latest"
+    commands:
+      - ls
+      - pwd
+ #     - apt install -y python-is-python3 pip
+ #     - pip install httpie
+ #     - pip install veracode_api_signing
+ #     - mkdir .veracode/ && touch .veracode/credentials
+ #     - echo "[default]" >> .veracode/credentials
+ #     - echo ${VERACODE_API_ID} >> .veracode/credentials
+ #     - echo ${VERACODE_API_KEY} >> .veracode/credentials
+ #     - export VERACODE_API_ID="${VERACODE_API_ID}"
+ #     - export VERACODE_API_KEY="${VERACODE_API_KEY}"
+ #     - http --auth-type=veracode_hmac GET "https://api.veracode.com/api/authn/v2/users"
+ #     - ls
+   #   - curl -sSL https://raw.githubusercontent.com/m4ckdaddy/ReportingAPI/main/one-week-results.sh | sh 
+    #  - wget https://raw.githubusercontent.com/m4ckdaddy/ReportingAPI/main/one-week-results.sh 
+#      - chmod +x ./one-week-results.sh
+ #     - ./one-week-results.sh
+  test:
+    title: "Running test"
+    type: "freestyle" # Run any command
+    image: "veracode/api-signing:latest" # The image in which command will be executed
+    working_directory: "${{clone}}" # Running command where code cloned
+    commands:
+      - mkdir .veracode/ && touch .veracode/credentials
+      #- echo "[default]" >> .veracode/credentials
+      #- echo "veracode_api_key_id=" >> .veracode/credentials
+      #- export ${VERACODE_API_ID}=veracode_api_key_id
+      #- echo  >> .veracode/credentials
+      #- echo ${VERACODE_API_KEY} >> .veracode/credentials
+      - export VERACODE_API_KEY_ID="${VERACODE_API_ID}"
+      - export VERACODE_API_KEY_SECRET="${VERACODE_API_KEY}"
+      - http --auth-type=veracode_hmac GET "https://api.veracode.com/api/authn/v2/users/self"
+      - reporting_id=$(http --auth-type=veracode_hmac POST "https://api.veracode.com/appsec/v1/analytics/report" < input.json)
+      - echo $reporting_id
+      - id=$(echo $reporting_id | cut -d '"' -f6)
+      - echo "pause for 15 seconds"
+      - sleep 15
+      - echo "resuming"
+      - echo $id
+# Enter in the ID from the previous method
+      - http --auth-type=veracode_hmac GET "https://api.veracode.com/appsec/v1/analytics/report/$id" | jq . > report.json
+      - echo "Finished processing. Filtered JSON saved to $output_file."
+
+      #- ./one-week-results.sh 
+    stage: "test"
